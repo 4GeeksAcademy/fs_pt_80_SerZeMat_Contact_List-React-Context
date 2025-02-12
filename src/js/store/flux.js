@@ -1,45 +1,91 @@
 const getState = ({ getStore, getActions, setStore }) => {
-	return {
-		store: {
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
-		},
-		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
-			},
-			loadSomeData: () => {
-				/**
-					fetch().then().then(data => setStore({ "foo": data.bar }))
-				*/
-			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
+    return {
+        store: {
+            url: "https://playground.4geeks.com/contact/",
+            selected: null,
+            contacts: null,
+        },
+        actions: {
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
+            setSelected: (contact) => setStore({ selected: contact }),
 
-				//reset the global store
-				setStore({ demo: demo });
-			}
-		}
-	};
+            createAgenda: async () => {
+                try {
+                    const resp = await fetch(`${getStore().url}agendas/sergio-cecilia`,
+                        {
+                            method: "POST",
+                        });
+                    if (!resp.ok) throw new Error("Error mientras se crea la agenda:");
+                    getActions().getContact();
+                    return true;
+                } catch (error) {
+                    console.error("Error al crear los agenda:", error);
+                }
+            },
+
+            createContact: async (contact) => {
+                try {
+                    const resp = await fetch(`${getStore().url}agendas/sergio-cecilia/contacts`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(contact),
+                        });
+                    if (!resp.ok) throw new Error("Error al crear el contacto");
+                    return getActions().getContact()
+                } catch (error) {
+                    console.error("Error al enviar el contacto:", error);
+                }
+            },
+
+            getContact: async () => {
+                try {
+                    const resp = await fetch(`${getStore().url}agendas/sergio-cecilia`);
+                    if (!resp.ok) {
+                        if (resp.status === 404) {
+                            console.log("Agenda no encontrada, creando una nueva...");
+                            return getActions().createAgenda();
+                        }
+                        throw new Error("Error mientras se obtiene el contacto");
+                    }
+                    const data = await resp.json();
+                    setStore({contacts: data})
+                    return true
+                } catch (error) {
+                    console.error("Error al cargar los contactos:", error);
+                }
+            },
+
+            updateContact: async (id, contact) => {
+                try {
+                    const resp = await fetch(`${getStore().url}agendas/sergio-cecilia/contacts/${id}`, {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify(contact),
+                        });
+                    if (!resp.ok) throw new Error("Error al modificar el contacto");
+                    return getActions().getContact()
+                } catch (error) {
+                    console.error("Error en la modificación:", error);
+                }
+            },
+
+            deleteContact: async (id) => {
+                try {
+                    const resp = await fetch(`${getStore().url}agendas/sergio-cecilia/contacts/${id}`, {
+                        method: "DELETE"
+                    });
+                    if (!resp.ok) throw new Error("Error al eliminar el contacto");
+                    return getActions().getContact()
+                } catch (error) {
+                    console.error("Error en la eliminación:", error);
+                }
+            }
+        }
+    };
 };
 
 export default getState;
